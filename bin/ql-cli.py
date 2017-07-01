@@ -14,7 +14,8 @@ logger.setLevel(logging.INFO)
 
 
 def main(argv):
-    env = gym.make('FrozenLake-v0')
+    # env = gym.make('FrozenLake-v0')
+    env = gym.make('FrozenLake8x8-v0')
 
     num_episodes = 2000
 
@@ -30,10 +31,9 @@ def main(argv):
     logger.info('Q table shape: {}'.format(q_table.shape))
 
     reward_lst = []
-
     for i in range(num_episodes):
-        s = env.reset()
 
+        s = env.reset()
         reward = 0
 
         for j in range(100):
@@ -45,14 +45,16 @@ def main(argv):
 
             # Update Q-Table with new knowledge
             q_table[s, a] = q_table[s, a] + learning_rate * (r + γ * np.max(q_table[s1, :]) - q_table[s, a])
-            s = s1
 
+            s = s1
             reward += r
 
         logger.debug('Episode: {}\tReward: {:.4f}'.format(i, reward))
         reward_lst += [reward]
 
     logger.info('Reward over time: {:.4f}'.format(sum(reward_lst)/num_episodes))
+
+    print(q_table)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
