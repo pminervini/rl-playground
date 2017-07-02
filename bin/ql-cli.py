@@ -22,30 +22,36 @@ def main(argv):
     logger.info('Observation space size: {}'.format(observation_space_size))
     logger.info('Action space size: {}'.format(action_space_size))
 
-    num_episodes = 20000
+    nb_episodes = 20000
     learning_rate = 0.5
     γ = 0.95
 
-    # Initialize Q table with all zeros
-    q_table = np.zeros([env.observation_space.n, env.action_space.n])
+    # Initialize Q (state x action) table with all zeros
+    Q = np.zeros([env.observation_space.n, env.action_space.n])
 
-    logger.info('Q table shape: {}'.format(q_table.shape))
+    logger.info('Q table shape: {}'.format(Q.shape))
 
     reward_lst = []
-    for i in range(num_episodes):
 
+    for episode_idx in range(nb_episodes):
+        # Observe the current state
         state = env.reset()
+
         sum_rewards = 0
 
-        for j in range(100):
-            # Choose an action by greedily (with noise) picking from Q table
-            a = np.argmax(q_table[state, :] + np.random.randn(1, env.action_space.n) * (1. / (i + 1)))
+        # Annealing schedule for the qty. of noise used when (greedily) selecting the next action
+        ε = 1. / (episode_idx + 1.)
+
+        for transition_idx in range(100):
+            # Select an action by greedily (with noise) picking from the Q table
+            noise = np.random.randn(1, env.action_space.n)
+            a = np.argmax(Q[state, :] + ε * noise)
 
             # Get new state and reward from environment
             new_state, reward, done, _ = env.step(a)
 
             # Update Q-Table with new knowledge
-            q_table[state, a] = q_table[state, a] + learning_rate * (reward + γ * np.max(q_table[new_state, :]) - q_table[state, a])
+            Q[state, a] = Q[state, a] + learning_rate * (reward + γ * np.max(Q[new_state, :]) - Q[state, a])
 
             state = new_state
             sum_rewards += reward
@@ -53,10 +59,10 @@ def main(argv):
             if done:
                 break
 
-        logger.info('Episode {}\t Reward: {}'.format(i, sum_rewards))
+        logger.info('Episode {}\t Reward: {}'.format(episode_idx, sum_rewards))
         reward_lst += [sum_rewards]
 
-    logger.info('Reward over time: {:.4f}'.format(sum(reward_lst)/num_episodes))
+    logger.info('Reward over time: {:.4f}'.format(sum(reward_lst)/nb_episodes))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
