@@ -14,7 +14,6 @@ logger.setLevel(logging.INFO)
 
 
 def main(argv):
-    # env = gym.make('FrozenLake-v0')
     env = gym.make('FrozenLake8x8-v0')
 
     num_episodes = 2000
