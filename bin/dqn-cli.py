@@ -66,13 +66,14 @@ def main(argv):
             sum_rewards = 0
 
             for j in range(100):
-                # Choose an action by greedily (with ε chance of random action) from the Q-network
+                # Choose an action from the Q-network
                 a, all_Q = session.run([predict, Q_out], feed_dict=to_fd(s))
 
+                # Chance of random action
                 if np.random.rand(1) < ε:
                     a[0] = env.action_space.sample()
 
-                # Get new state and reward from environment
+                # Execute the action, and get new state and reward from environment
                 s1, r, d, _ = env.step(a[0])
 
                 # Obtain the Q' values by feeding the new state through our network
@@ -80,6 +81,7 @@ def main(argv):
 
                 max_Q1 = np.max(Q1)
                 target_Q = all_Q
+
                 target_Q[0, a[0]] = r + γ * max_Q1
 
                 # Train our network using target and predicted Q values
