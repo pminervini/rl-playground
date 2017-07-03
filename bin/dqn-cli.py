@@ -25,18 +25,16 @@ def main(argv):
     logger.info('Action space size: {}'.format(action_space_size))
 
     # Feed-forward network used to choose actions
-    inputs = tf.placeholder(shape=[1, observation_space_size], dtype=tf.float32, name='inputs')
+    inputs = tf.placeholder(shape=[None, observation_space_size], dtype=tf.float32, name='inputs')
 
-    import inspect
-    spec = inspect.getfullargspec(tf.contrib.layers.fully_connected)
-    print(spec)
+    def _onehot(s):
+        I = np.identity(observation_space_size)
+        return I[s:s + 1]
 
-    Q_out = tf.contrib.layers.fully_connected(inputs=inputs,
-                                              num_outputs=action_space_size,
+    Q_out = tf.contrib.layers.fully_connected(inputs=inputs, num_outputs=action_space_size,
                                               weights_initializer=tf.contrib.layers.xavier_initializer(uniform=False),
-                                              biases_initializer=tf.zeros_initializer(),
                                               activation_fn=None)
-    predict = tf.argmax(Q_out, 1)
+    predict = tf.argmax(Q_out, 1)[0]
 
     # Loss: sum of squares difference between the target and prediction Q values
     next_Q = tf.placeholder(shape=[1, action_space_size], dtype=tf.float32)
@@ -47,47 +45,42 @@ def main(argv):
 
     init_op = tf.global_variables_initializer()
 
-    num_episodes = 20000
+    nb_episodes = 5000
 
     γ = 0.99
     ε = 0.1
-
-    def to_fd(s):
-        return {inputs: np.identity(observation_space_size)[s:s + 1]}
 
     reward_lst = []
 
     with tf.Session() as session:
         session.run(init_op)
 
-        for i in range(num_episodes):
+        for i in range(nb_episodes):
             # Reset the environment, and get the first observation
             state = env.reset()
             sum_rewards = 0
 
             for j in range(100):
                 # Choose an action from the Q-network
-                a, all_Q = session.run([predict, Q_out], feed_dict=to_fd(state))
+                action, all_Q = session.run([predict, Q_out], feed_dict={inputs: _onehot(state)})
 
                 # Chance of random action
                 if np.random.rand(1) < ε:
-                    a[0] = env.action_space.sample()
+                    action = env.action_space.sample()
 
                 # Execute the action, and get new state and reward from environment
-                new_state, reward, done, _ = env.step(a[0])
+                new_state, reward, done, _ = env.step(action)
 
                 # Obtain the Q' values by feeding the new state through our network
-                Q1 = session.run(Q_out, feed_dict=to_fd(new_state))
+                Q1 = session.run(Q_out, feed_dict={inputs: _onehot(new_state)})
 
                 max_Q1 = np.max(Q1)
                 target_Q = all_Q
 
-                target_Q[0, a[0]] = reward + γ * max_Q1
+                target_Q[0, action] = reward + γ * max_Q1
 
                 # Train our network using target and predicted Q values
-                fd = to_fd(state)
-                fd.update({next_Q: target_Q})
-                _ = session.run([update_model_op], feed_dict=fd)
+                _ = session.run([update_model_op], feed_dict={inputs: _onehot(state), next_Q: target_Q})
 
                 sum_rewards += reward
                 state = new_state
@@ -98,6 +91,8 @@ def main(argv):
 
             logger.info('Episode {}\t Reward: {}'.format(i, sum_rewards))
             reward_lst += [sum_rewards]
+
+        logger.info('Reward over time: {:.4f}'.format(sum(reward_lst) / nb_episodes))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

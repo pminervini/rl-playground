@@ -22,7 +22,7 @@ def main(argv):
     logger.info('Observation space size: {}'.format(observation_space_size))
     logger.info('Action space size: {}'.format(action_space_size))
 
-    nb_episodes = 20000
+    nb_episodes = 5000
     learning_rate = 0.5
     γ = 0.95
 
@@ -45,13 +45,13 @@ def main(argv):
         for transition_idx in range(100):
             # Select an action by greedily (with noise) picking from the Q table
             noise = np.random.randn(1, env.action_space.n)
-            a = np.argmax(Q[state, :] + ε * noise)
+            action = np.argmax(Q[state, :] + ε * noise)
 
             # Get new state and reward from environment
-            new_state, reward, done, _ = env.step(a)
+            new_state, reward, done, _ = env.step(action)
 
             # Update Q-Table with new knowledge
-            Q[state, a] = Q[state, a] + learning_rate * (reward + γ * np.max(Q[new_state, :]) - Q[state, a])
+            Q[state, action] = Q[state, action] + learning_rate * (reward + γ * np.max(Q[new_state, :]) - Q[state, action])
 
             state = new_state
             sum_rewards += reward
@@ -62,7 +62,7 @@ def main(argv):
         logger.info('Episode {}\t Reward: {}'.format(episode_idx, sum_rewards))
         reward_lst += [sum_rewards]
 
-    logger.info('Reward over time: {:.4f}'.format(sum(reward_lst)/nb_episodes))
+    logger.info('Reward over time: {:.4f}'.format(sum(reward_lst) / nb_episodes))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
